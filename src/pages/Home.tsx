@@ -13,7 +13,7 @@ function Home() {
 const [festivalName, setFestivalName] = useState("Meelad Fest 2026");
 const [festivalLogo, setFestivalLogo] = useState("");
 const [festivalBanner, setFestivalBanner] = useState("");
-const [festivalDate, setFestivalDate] = useState("");
+const [_festivalDate, setFestivalDate] = useState("");
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [upcomingProgrammes, setUpcomingProgrammes] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);

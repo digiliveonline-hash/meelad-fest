@@ -61,7 +61,6 @@ function AnnouncementSection() {
     if (!confirm("Delete this announcement?")) return;
 
     await deleteDoc(doc(db, "announcements", id));
-
     loadNotices();
   };
 
@@ -87,5 +86,33 @@ function AnnouncementSection() {
       </button>
 
       <div className="mt-8 space-y-3">
-        {notices.map((item:
-        
+        {notices.map((item: any) => (
+          <div
+            key={item.id}
+            className="border rounded-lg p-4 flex justify-between items-center"
+          >
+            <p>{item.notice}</p>
+
+            <div className="space-x-2">
+              <button
+                onClick={() => editNotice(item)}
+                className="bg-yellow-500 text-white px-3 py-1 rounded"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={() => deleteNotice(item.id)}
+                className="bg-red-600 text-white px-3 py-1 rounded"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default AnnouncementSection;
