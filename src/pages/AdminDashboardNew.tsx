@@ -719,16 +719,15 @@ function AdminDashboardNew() {
               />
 
               <select
-                value={programmeCategory}
-                onChange={(e) =>
-                  setProgrammeCategory(e.target.value)
-                }
-                className="w-full border p-2 rounded"
-              >
-                <option value="SJ">Sub Junior</option>
-                <option value="J">Junior</option>
-                <option value="S">Senior</option>
-              </select>
+  value={candidateCategory}
+  onChange={(e) => setCandidateCategory(e.target.value)}
+  className="w-full border p-2 rounded"
+>
+  <option value="SJ">Sub Junior</option>
+  <option value="J">Junior</option>
+  <option value="S">Senior</option>
+  <option value="SS">Super Senior</option>
+</select>
 
               <input
                 type="text"
@@ -997,15 +996,16 @@ function AdminDashboardNew() {
                 <option value="Girl">Girl</option>
               </select>
 
-              <select
-                value={candidateCategory}
-                onChange={(e) => setCandidateCategory(e.target.value)}
-                className="w-full border p-2 rounded"
-              >
-                <option value="SJ">Sub Junior</option>
-                <option value="J">Junior</option>
-                <option value="S">Senior</option>
-              </select>
+             <select
+  value={candidateCategory}
+  onChange={(e) => setCandidateCategory(e.target.value)}
+  className="w-full border p-2 rounded"
+>
+  <option value="SJ">Sub Junior</option>
+  <option value="J">Junior</option>
+  <option value="S">Senior</option>
+  <option value="SS">Super Senior</option>
+</select>
 
               <select
                 value={selectedTeam}

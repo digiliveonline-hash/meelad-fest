@@ -165,9 +165,10 @@ useEffect(() => {
             onChange={(e) => setCategory(e.target.value)}
             className="w-full border p-2 rounded mb-3"
           >
-            <option value="SJ">Sub Junior</option>
-            <option value="J">Junior</option>
-            <option value="S">Senior</option>
+   <option value="SJ">Sub Junior</option>
+<option value="J">Junior</option>
+<option value="S">Senior</option>
+<option value="SS">Super Senior</option>
           </select>
 
        <select

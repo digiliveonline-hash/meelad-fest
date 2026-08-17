@@ -27,6 +27,7 @@ const [_festivalDate, setFestivalDate] = useState("");
 
 
 
+
     const loadCounts = async () => {
 
     const candidateSnap = await getDocs(collection(db, "candidates"));
@@ -114,6 +115,8 @@ const loadSettings = async () => {
   }
 };
 
+
+
 useEffect(() => {
 
  
@@ -124,7 +127,7 @@ useEffect(() => {
   loadLeaderboard();
   loadTodayProgrammes();
   loadSettings();
-
+    
   updateCountdown();
 
 
