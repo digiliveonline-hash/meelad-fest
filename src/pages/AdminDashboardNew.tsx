@@ -35,6 +35,8 @@ function AdminDashboardNew() {
 
   const [programmeName, setProgrammeName] = useState("");
 
+  const [programmeType, setProgrammeType] = useState("Individual");
+
   const [programmeCategory, setProgrammeCategory] = useState("SJ");
 
   const [programmeStage, setProgrammeStage] = useState("On Stage");
@@ -423,88 +425,196 @@ function AdminDashboardNew() {
     // ==========================
   // Publish Result
   // ==========================
+const publishResult = async () => {
+  if (
+    !resultProgramme ||
+    !firstChest ||
+    !secondChest ||
+    !thirdChest
+  ) {
+    alert("Please fill all fields");
+    return;
+  }
 
-  const publishResult = async () => {
-    if (
-      !resultProgramme ||
-      !firstChest ||
-      !secondChest ||
-      !thirdChest
-    ) {
-      alert("Please fill all fields");
-      return;
-    }
+  // ==========================
+  // Check programme
+  // ==========================
 
-    const resultSnapshot = await getDocs(collection(db, "results"));
+  const programmeSnapshot = await getDocs(
+    collection(db, "schedule")
+  );
 
-    const alreadyPublished = resultSnapshot.docs.find(
-      (item: any) => item.data().programmeId === resultProgramme
-    );
+ const programme: any = programmeSnapshot.docs
+  .map((item) => ({
+    id: item.id,
+    ...item.data(),
+  }))
+  .find(
+    (item: any) => item.id === resultProgramme
+  );
 
-    if (alreadyPublished) {
-      alert("Result already published!");
-      return;
-    }
+  if (!programme) {
+    alert("Programme not found");
+    return;
+  }
 
-    await addDoc(collection(db, "results"), {
-      programmeId: resultProgramme,
-      firstChest,
-      secondChest,
-      thirdChest,
-      createdAt: new Date(),
-    });
+  // ==========================
+  // Check if result already published
+  // ==========================
 
-    const candidateSnapshot = await getDocs(collection(db, "candidates"));
+  const resultSnapshot = await getDocs(
+    collection(db, "results")
+  );
 
-    const candidateList: any[] = candidateSnapshot.docs.map((item) => ({
+  const alreadyPublished = resultSnapshot.docs.find(
+    (item: any) =>
+      item.data().programmeId === resultProgramme
+  );
+
+  if (alreadyPublished) {
+    alert("Result already published!");
+    return;
+  }
+
+  // ==========================
+  // Points System
+  // ==========================
+
+  let firstPoint = 5;
+  let secondPoint = 3;
+  let thirdPoint = 1;
+
+  if (programme.programmeType === "Group") {
+    firstPoint = 10;
+    secondPoint = 5;
+    thirdPoint = 3;
+  }
+
+  // ==========================
+  // Save Result
+  // ==========================
+
+  await addDoc(collection(db, "results"), {
+    programmeId: resultProgramme,
+    firstChest,
+    secondChest,
+    thirdChest,
+    programmeType:
+      programme.programmeType || "Individual",
+    firstPoint,
+    secondPoint,
+    thirdPoint,
+    createdAt: new Date(),
+  });
+
+  // ==========================
+  // Load Candidates
+  // ==========================
+
+  const candidateSnapshot = await getDocs(
+    collection(db, "candidates")
+  );
+
+  const candidateList: any[] =
+    candidateSnapshot.docs.map((item) => ({
       id: item.id,
       ...item.data(),
     }));
 
-    const first = candidateList.find(
-      (c: any) => String(c.chestNo) === String(firstChest)
+  const first = candidateList.find(
+    (c: any) =>
+      String(c.chestNo) === String(firstChest)
+  );
+
+  const second = candidateList.find(
+    (c: any) =>
+      String(c.chestNo) === String(secondChest)
+  );
+
+  const third = candidateList.find(
+    (c: any) =>
+      String(c.chestNo) === String(thirdChest)
+  );
+
+  // ==========================
+  // Load Teams
+  // ==========================
+
+  const teamSnapshot = await getDocs(
+    collection(db, "teams")
+  );
+
+  // ==========================
+  // Update Team Score
+  // ==========================
+
+  const updateScore = async (
+    teamName: string,
+    points: number
+  ) => {
+    const teamDoc = teamSnapshot.docs.find(
+      (t: any) =>
+        t.data().teamName === teamName
     );
 
-    const second = candidateList.find(
-      (c: any) => String(c.chestNo) === String(secondChest)
-    );
+    if (teamDoc) {
+      const current =
+        teamDoc.data().score || 0;
 
-    const third = candidateList.find(
-      (c: any) => String(c.chestNo) === String(thirdChest)
-    );
-
-    const teamSnapshot = await getDocs(collection(db, "teams"));
-
-    const updateScore = async (teamName: string, points: number) => {
-      const teamDoc = teamSnapshot.docs.find(
-        (t: any) => t.data().teamName === teamName
-      );
-
-      if (teamDoc) {
-        const current = teamDoc.data().score || 0;
-
-        await updateDoc(doc(db, "teams", teamDoc.id), {
+      await updateDoc(
+        doc(db, "teams", teamDoc.id),
+        {
           score: current + points,
-        });
-      }
-    };
-
-    if (first) await updateScore(first.team, 10);
-
-    if (second) await updateScore(second.team, 7);
-
-    if (third) await updateScore(third.team, 5);
-
-    setResultProgramme("");
-    setFirstChest("");
-    setSecondChest("");
-    setThirdChest("");
-
-    loadResults();
-    loadTeams();
-
-    alert("Result Published Successfully");
+        }
+      );
+    }
   };
+
+  // ==========================
+  // Add Points
+  // ==========================
+
+  if (first) {
+    await updateScore(
+      first.team,
+      firstPoint
+    );
+  }
+
+  if (second) {
+    await updateScore(
+      second.team,
+      secondPoint
+    );
+  }
+
+  if (third) {
+    await updateScore(
+      third.team,
+      thirdPoint
+    );
+  }
+
+  // ==========================
+  // Clear Form
+  // ==========================
+
+  setResultProgramme("");
+  setFirstChest("");
+  setSecondChest("");
+  setThirdChest("");
+
+  loadResults();
+  loadTeams();
+
+  alert(
+    `Result Published Successfully!\n\n${
+      programme.programmeType === "Group"
+        ? "Group Points: 10 / 5 / 3"
+        : "Individual Points: 5 / 3 / 1"
+    }`
+  );
+};
     // ==========================
   // Result Edit / Delete
   // ==========================
@@ -717,6 +827,14 @@ function AdminDashboardNew() {
                 }
                 className="w-full border p-2 rounded"
               />
+              <select
+  value={programmeType}
+  onChange={(e) => setProgrammeType(e.target.value)}
+  className="w-full border p-2 rounded mb-3"
+>
+  <option value="Individual">Individual</option>
+  <option value="Group">Group</option>
+</select>
 
               <select
   value={candidateCategory}
