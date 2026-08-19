@@ -236,39 +236,66 @@ function AdminDashboardNew() {
     // ==========================
   // Programme CRUD
   // ==========================
+const saveProgramme = async () => {
+  if (programmeName.trim() === "") {
+    alert("Please enter programme name");
+    return;
+  }
 
-  const saveProgramme = async () => {
-    if (programmeName.trim() === "") {
-      alert("Please enter programme name");
-      return;
-    }
-
+  try {
     if (programmeEditId === "") {
+      // =========================
+      // ADD NEW PROGRAMME
+      // =========================
       await addDoc(collection(db, "schedule"), {
-        programmeName,
+        programmeName: programmeName.trim(),
+
+        // Individual / Group
+        programmeType,
+
+        // Kids / SJ / J / S / SS
         category: programmeCategory,
+
         stage: programmeStage,
         venue: programmeVenue,
         date: programmeDate,
         time: programmeTime,
         duration: programmeDuration,
+
         createdAt: new Date(),
       });
     } else {
-      await updateDoc(doc(db, "schedule", programmeEditId), {
-        programmeName,
-        category: programmeCategory,
-        stage: programmeStage,
-        venue: programmeVenue,
-        date: programmeDate,
-        time: programmeTime,
-        duration: programmeDuration,
-      });
+      // =========================
+      // UPDATE PROGRAMME
+      // =========================
+      await updateDoc(
+        doc(db, "schedule", programmeEditId),
+        {
+          programmeName: programmeName.trim(),
+
+          // Individual / Group
+          programmeType,
+
+          // Kids / SJ / J / S / SS
+          category: programmeCategory,
+
+          stage: programmeStage,
+          venue: programmeVenue,
+          date: programmeDate,
+          time: programmeTime,
+          duration: programmeDuration,
+        }
+      );
 
       setProgrammeEditId("");
     }
 
+    // =========================
+    // CLEAR FORM
+    // =========================
+
     setProgrammeName("");
+    setProgrammeType("Individual");
     setProgrammeCategory("SJ");
     setProgrammeStage("On Stage");
     setProgrammeVenue("");
@@ -278,30 +305,16 @@ function AdminDashboardNew() {
 
     setShowProgrammeForm(false);
 
-    loadProgrammes();
-  };
+    await loadProgrammes();
 
-  const editProgramme = (item: any) => {
-    setProgrammeName(item.programmeName);
-    setProgrammeCategory(item.category);
-    setProgrammeStage(item.stage);
-    setProgrammeVenue(item.venue);
-    setProgrammeDate(item.date);
-    setProgrammeTime(item.time);
-    setProgrammeDuration(item.duration || "");
+    alert("Programme saved successfully!");
+  } catch (error) {
+    console.error("Error saving programme:", error);
 
-    setProgrammeEditId(item.id);
+    alert("Something went wrong while saving programme.");
+  }
+};
 
-    setShowProgrammeForm(true);
-  };
-
-  const deleteProgramme = async (id: string) => {
-    if (!confirm("Delete this programme?")) return;
-
-    await deleteDoc(doc(db, "schedule", id));
-
-    loadProgrammes();
-  };
     // ==========================
   // Team CRUD
   // ==========================
@@ -422,6 +435,75 @@ function AdminDashboardNew() {
 
     loadCandidates();
   };
+
+  // ==========================
+// Edit Programme
+// ==========================
+
+const editProgramme = (item: any) => {
+  setProgrammeName(item.programmeName || "");
+
+  setProgrammeType(
+    item.programmeType || "Individual"
+  );
+
+  setProgrammeCategory(
+    item.category || "SJ"
+  );
+
+  setProgrammeStage(
+    item.stage || "On Stage"
+  );
+
+  setProgrammeVenue(
+    item.venue || ""
+  );
+
+  setProgrammeDate(
+    item.date || ""
+  );
+
+  setProgrammeTime(
+    item.time || ""
+  );
+
+  setProgrammeDuration(
+    item.duration || ""
+  );
+
+  setProgrammeEditId(item.id);
+
+  setShowProgrammeForm(true);
+};
+
+
+// ==========================
+// Delete Programme
+// ==========================
+
+const deleteProgramme = async (id: string) => {
+  if (!confirm("Delete this programme?")) return;
+
+  try {
+    await deleteDoc(
+      doc(db, "schedule", id)
+    );
+
+    await loadProgrammes();
+
+    alert("Programme deleted successfully!");
+  } catch (error) {
+    console.error(
+      "Error deleting programme:",
+      error
+    );
+
+    alert(
+      "Something went wrong while deleting programme."
+    );
+  }
+};
+
     // ==========================
   // Publish Result
   // ==========================
@@ -836,11 +918,12 @@ const publishResult = async () => {
   <option value="Group">Group</option>
 </select>
 
-              <select
-  value={candidateCategory}
-  onChange={(e) => setCandidateCategory(e.target.value)}
+   <select
+  value={programmeCategory}
+  onChange={(e) => setProgrammeCategory(e.target.value)}
   className="w-full border p-2 rounded"
 >
+  <option value="K">Kids</option>
   <option value="SJ">Sub Junior</option>
   <option value="J">Junior</option>
   <option value="S">Senior</option>
@@ -1114,11 +1197,12 @@ const publishResult = async () => {
                 <option value="Girl">Girl</option>
               </select>
 
-             <select
-  value={candidateCategory}
-  onChange={(e) => setCandidateCategory(e.target.value)}
+    <select
+  value={programmeCategory}
+  onChange={(e) => setProgrammeCategory(e.target.value)}
   className="w-full border p-2 rounded"
 >
+  <option value="K">Kids</option>
   <option value="SJ">Sub Junior</option>
   <option value="J">Junior</option>
   <option value="S">Senior</option>
