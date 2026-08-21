@@ -12,6 +12,27 @@ import {
 import { db } from "../firebase/firebase";
 
 function AdminDashboardNew() {
+    const getCategoryName = (category: string) => {
+    switch (category) {
+      case "K":
+        return "Kids";
+
+      case "SJ":
+        return "Sub Junior";
+
+      case "J":
+        return "Junior";
+
+      case "S":
+        return "Senior";
+
+      case "SS":
+        return "Super Senior";
+
+      default:
+        return category || "-";
+    }
+  };
 
   // ==========================
   // Announcement States
@@ -699,6 +720,7 @@ const deleteResult = async (id: string) => {
     alert("Something went wrong while deleting result.");
   }
 };
+
   // ==========================
   // Start JSX
   // ==========================
@@ -1293,152 +1315,168 @@ const deleteResult = async (id: string) => {
           )}
 
           <hr className="my-8" />
-                    {/* ==========================
-              Result Management
-          ========================== */}
+                   {/* ==========================
+    Result Management
+========================== */}
 
-          <h2 className="text-2xl font-bold mb-5">
-            🏆 Result Management
-          </h2>
+<h2 className="text-2xl font-bold mb-5">
+  🏆 Result Management
+</h2>
 
-          <div className="border rounded-lg p-4 mb-8">
+<div className="border rounded-lg p-4 mb-8">
 
-            <select
-              value={resultProgramme}
-              onChange={(e) => setResultProgramme(e.target.value)}
-              className="w-full border p-2 rounded mb-3"
-            >
-              <option value="">Select Programme</option>
+  <select
+    value={resultProgramme}
+    onChange={(e) => setResultProgramme(e.target.value)}
+    className="w-full border p-2 rounded mb-3"
+  >
+    <option value="">Select Programme</option>
 
-              {programmes.map((programme: any) => (
-                <option
-                  key={programme.id}
-                  value={programme.id}
-                >
-                  {programme.programmeName}
-                </option>
-              ))}
+    {programmes.map((programme: any) => (
+      <option
+        key={programme.id}
+        value={programme.id}
+      >
+        {programme.programmeName} —{" "}
+        {getCategoryName(programme.category)}
+      </option>
+    ))}
 
-            </select>
+  </select>
 
-            <input
-              type="text"
-              placeholder="🥇 First Prize Chest No"
-              value={firstChest}
-              onChange={(e) => setFirstChest(e.target.value)}
-              className="w-full border p-2 rounded mb-3"
-            />
+  <input
+    type="text"
+    placeholder="🥇 First Prize Chest No"
+    value={firstChest}
+    onChange={(e) => setFirstChest(e.target.value)}
+    className="w-full border p-2 rounded mb-3"
+  />
 
-            <input
-              type="text"
-              placeholder="🥈 Second Prize Chest No"
-              value={secondChest}
-              onChange={(e) => setSecondChest(e.target.value)}
-              className="w-full border p-2 rounded mb-3"
-            />
+  <input
+    type="text"
+    placeholder="🥈 Second Prize Chest No"
+    value={secondChest}
+    onChange={(e) => setSecondChest(e.target.value)}
+    className="w-full border p-2 rounded mb-3"
+  />
 
-            <input
-              type="text"
-              placeholder="🥉 Third Prize Chest No"
-              value={thirdChest}
-              onChange={(e) => setThirdChest(e.target.value)}
-              className="w-full border p-2 rounded mb-4"
-            />
+  <input
+    type="text"
+    placeholder="🥉 Third Prize Chest No"
+    value={thirdChest}
+    onChange={(e) => setThirdChest(e.target.value)}
+    className="w-full border p-2 rounded mb-4"
+  />
 
-            <button
-              onClick={publishResult}
-              className="bg-green-700 text-white px-6 py-2 rounded"
-            >
-              Publish Result
-            </button>
+  <button
+    onClick={publishResult}
+    className="bg-green-700 text-white px-6 py-2 rounded"
+  >
+    Publish Result
+  </button>
 
-          </div>
+</div>
 
-          <h2 className="text-xl font-bold mb-4">
-            Published Results
-          </h2>
+<h2 className="text-xl font-bold mb-4">
+  Published Results
+</h2>
 
-          {publishedResults.map((item: any) => (
+{publishedResults.map((item: any) => {
 
-            <div
-              key={item.id}
-              className="border rounded-lg p-4 mb-4"
-            >
+  const programme = programmes.find(
+    (p: any) => p.id === item.programmeId
+  );
 
-              <p>
-                <strong>Programme :</strong> {item.programmeId}
-              </p>
+  return (
+    <div
+      key={item.id}
+      className="border rounded-lg p-4 mb-4"
+    >
 
-              {editResultId === item.id ? (
+      <p>
+        <strong>Programme :</strong>{" "}
+        {programme?.programmeName || "Programme"}
+      </p>
 
-                <>
+      <p>
+        <strong>Category :</strong>{" "}
+        {getCategoryName(programme?.category)}
+      </p>
 
-                  <input
-                    value={editFirstChest}
-                    onChange={(e) =>
-                      setEditFirstChest(e.target.value)
-                    }
-                    className="w-full border p-2 rounded mb-2"
-                  />
+      {editResultId === item.id ? (
 
-                  <input
-                    value={editSecondChest}
-                    onChange={(e) =>
-                      setEditSecondChest(e.target.value)
-                    }
-                    className="w-full border p-2 rounded mb-2"
-                  />
+        <>
 
-                  <input
-                    value={editThirdChest}
-                    onChange={(e) =>
-                      setEditThirdChest(e.target.value)
-                    }
-                    className="w-full border p-2 rounded mb-3"
-                  />
+          <input
+            value={editFirstChest}
+            onChange={(e) =>
+              setEditFirstChest(e.target.value)
+            }
+            className="w-full border p-2 rounded mb-2"
+            placeholder="First Prize Chest No"
+          />
 
-                  <button
-                    onClick={updateResult}
-                    className="bg-blue-600 text-white px-3 py-1 rounded mr-2"
-                  >
-                    Update
-                  </button>
+          <input
+            value={editSecondChest}
+            onChange={(e) =>
+              setEditSecondChest(e.target.value)
+            }
+            className="w-full border p-2 rounded mb-2"
+            placeholder="Second Prize Chest No"
+          />
 
-                </>
+          <input
+            value={editThirdChest}
+            onChange={(e) =>
+              setEditThirdChest(e.target.value)
+            }
+            className="w-full border p-2 rounded mb-3"
+            placeholder="Third Prize Chest No"
+          />
 
-              ) : (
+          <button
+            onClick={updateResult}
+            className="bg-blue-600 text-white px-3 py-1 rounded mr-2"
+          >
+            Update
+          </button>
 
-                <>
+        </>
 
-                  <p>🥇 {item.firstChest}</p>
-                  <p>🥈 {item.secondChest}</p>
-                  <p>🥉 {item.thirdChest}</p>
+      ) : (
 
-                  <button
-                    onClick={() => editResult(item)}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded mr-2"
-                  >
-                    Edit
-                  </button>
+        <>
 
-                </>
+          <p>🥇 {item.firstChest}</p>
+          <p>🥈 {item.secondChest}</p>
+          <p>🥉 {item.thirdChest}</p>
 
-              )}
+          <button
+            onClick={() => editResult(item)}
+            className="bg-yellow-500 text-white px-3 py-1 rounded mr-2"
+          >
+            Edit
+          </button>
 
-              <button
-                onClick={() => deleteResult(item.id)}
-                className="bg-red-600 text-white px-3 py-1 rounded"
-              >
-                Delete
-              </button>
+        </>
 
-            </div>
+      )}
 
-          ))}
-                  </div>
+      <button
+        onClick={() => deleteResult(item.id)}
+        className="bg-red-600 text-white px-3 py-1 rounded"
+      >
+        Delete
+      </button>
+
+    </div>
+  );
+})}
+
+        </div>
 
       </div>
-      
+
     </div>
   );
 }
