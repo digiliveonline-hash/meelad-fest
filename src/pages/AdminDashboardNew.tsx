@@ -1331,16 +1331,26 @@ const deleteResult = async (id: string) => {
     className="w-full border p-2 rounded mb-3"
   >
     <option value="">Select Programme</option>
-
-    {programmes.map((programme: any) => (
-      <option
-        key={programme.id}
-        value={programme.id}
-      >
-        {programme.programmeName} —{" "}
-        {getCategoryName(programme.category)}
-      </option>
-    ))}
+{programmes.map((programme: any) => (
+  <option
+    key={programme.id}
+    value={programme.id}
+  >
+    {programme.programmeName} — {
+      programme.category === "K"
+        ? "Kids"
+        : programme.category === "SJ"
+        ? "Sub Junior"
+        : programme.category === "J"
+        ? "Junior"
+        : programme.category === "S"
+        ? "Senior"
+        : programme.category === "SS"
+        ? "Super Senior"
+        : "Category Not Set"
+    }
+  </option>
+))}
 
   </select>
 
