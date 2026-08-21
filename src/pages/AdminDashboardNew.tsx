@@ -504,6 +504,7 @@ const deleteProgramme = async (id: string) => {
   }
 };
 
+
     // ==========================
   // Publish Result
   // ==========================
@@ -518,205 +519,154 @@ const publishResult = async () => {
     return;
   }
 
-  // ==========================
-  // Check programme
-  // ==========================
-
-  const programmeSnapshot = await getDocs(
-    collection(db, "schedule")
-  );
-
- const programme: any = programmeSnapshot.docs
-  .map((item) => ({
-    id: item.id,
-    ...item.data(),
-  }))
-  .find(
-    (item: any) => item.id === resultProgramme
-  );
-
-  if (!programme) {
-    alert("Programme not found");
-    return;
-  }
-
-  // ==========================
-  // Check if result already published
-  // ==========================
-
-  const resultSnapshot = await getDocs(
-    collection(db, "results")
-  );
-
-  const alreadyPublished = resultSnapshot.docs.find(
-    (item: any) =>
-      item.data().programmeId === resultProgramme
-  );
-
-  if (alreadyPublished) {
-    alert("Result already published!");
-    return;
-  }
-
-  // ==========================
-  // Points System
-  // ==========================
-
-  let firstPoint = 5;
-  let secondPoint = 3;
-  let thirdPoint = 1;
-
-  if (programme.programmeType === "Group") {
-    firstPoint = 10;
-    secondPoint = 5;
-    thirdPoint = 3;
-  }
-
-  // ==========================
-  // Save Result
-  // ==========================
-
-  await addDoc(collection(db, "results"), {
-    programmeId: resultProgramme,
-    firstChest,
-    secondChest,
-    thirdChest,
-    programmeType:
-      programme.programmeType || "Individual",
-    firstPoint,
-    secondPoint,
-    thirdPoint,
-    createdAt: new Date(),
-  });
-
-  // ==========================
-  // Load Candidates
-  // ==========================
-
-  const candidateSnapshot = await getDocs(
-    collection(db, "candidates")
-  );
-
-  const candidateList: any[] =
-    candidateSnapshot.docs.map((item) => ({
-      id: item.id,
-      ...item.data(),
-    }));
-
-  const first = candidateList.find(
-    (c: any) =>
-      String(c.chestNo) === String(firstChest)
-  );
-
-  const second = candidateList.find(
-    (c: any) =>
-      String(c.chestNo) === String(secondChest)
-  );
-
-  const third = candidateList.find(
-    (c: any) =>
-      String(c.chestNo) === String(thirdChest)
-  );
-
-  // ==========================
-  // Load Teams
-  // ==========================
-
-  const teamSnapshot = await getDocs(
-    collection(db, "teams")
-  );
-
-  // ==========================
-  // Update Team Score
-  // ==========================
-
-  const updateScore = async (
-    teamName: string,
-    points: number
-  ) => {
-    const teamDoc = teamSnapshot.docs.find(
-      (t: any) =>
-        t.data().teamName === teamName
+  try {
+    // Find selected programme
+    const programme = programmes.find(
+      (item: any) => item.id === resultProgramme
     );
 
-    if (teamDoc) {
-      const current =
-        teamDoc.data().score || 0;
-
-      await updateDoc(
-        doc(db, "teams", teamDoc.id),
-        {
-          score: current + points,
-        }
-      );
+    if (!programme) {
+      alert("Programme not found");
+      return;
     }
-  };
 
-  // ==========================
-  // Add Points
-  // ==========================
-
-  if (first) {
-    await updateScore(
-      first.team,
-      firstPoint
+    // Check duplicate result
+    const alreadyPublished = publishedResults.find(
+      (item: any) => item.programmeId === resultProgramme
     );
-  }
 
-  if (second) {
-    await updateScore(
-      second.team,
-      secondPoint
-    );
-  }
+    if (alreadyPublished) {
+      alert("Result already published!");
+      return;
+    }
 
-  if (third) {
-    await updateScore(
-      third.team,
-      thirdPoint
-    );
-  }
+    // Points
+    let firstPoint = 5;
+    let secondPoint = 3;
+    let thirdPoint = 1;
 
-  // ==========================
-  // Clear Form
-  // ==========================
+    if (programme.programmeType === "Group") {
+      firstPoint = 10;
+      secondPoint = 5;
+      thirdPoint = 3;
+    }
 
-  setResultProgramme("");
-  setFirstChest("");
-  setSecondChest("");
-  setThirdChest("");
-
-  loadResults();
-  loadTeams();
-
-  alert(
-    `Result Published Successfully!\n\n${
-      programme.programmeType === "Group"
-        ? "Group Points: 10 / 5 / 3"
-        : "Individual Points: 5 / 3 / 1"
-    }`
-  );
-};
-    // ==========================
-  // Result Edit / Delete
-  // ==========================
-
-  const editResult = (item: any) => {
-    setEditResultId(item.id);
-    setResultProgramme(item.programmeId);
-    setEditFirstChest(item.firstChest);
-    setEditSecondChest(item.secondChest);
-    setEditThirdChest(item.thirdChest);
-  };
-
-  const updateResult = async () => {
-    if (editResultId === "") return;
-
-    await updateDoc(doc(db, "results", editResultId), {
-      firstChest: editFirstChest,
-      secondChest: editSecondChest,
-      thirdChest: editThirdChest,
+    // Save result
+    await addDoc(collection(db, "results"), {
+      programmeId: resultProgramme,
+      firstChest,
+      secondChest,
+      thirdChest,
+      programmeType:
+        programme.programmeType || "Individual",
+      firstPoint,
+      secondPoint,
+      thirdPoint,
+      createdAt: new Date(),
     });
+
+    // Find candidates
+    const first = candidates.find(
+      (c: any) =>
+        String(c.chestNo) === String(firstChest)
+    );
+
+    const second = candidates.find(
+      (c: any) =>
+        String(c.chestNo) === String(secondChest)
+    );
+
+    const third = candidates.find(
+      (c: any) =>
+        String(c.chestNo) === String(thirdChest)
+    );
+
+    // Update team scores
+    const updateTeamScore = async (
+      teamName: string,
+      points: number
+    ) => {
+      const team = teams.find(
+        (t: any) => t.teamName === teamName
+      );
+
+      if (team) {
+        await updateDoc(
+          doc(db, "teams", team.id),
+          {
+            score: (team.score || 0) + points,
+          }
+        );
+      }
+    };
+
+    if (first) {
+      await updateTeamScore(first.team, firstPoint);
+    }
+
+    if (second) {
+      await updateTeamScore(second.team, secondPoint);
+    }
+
+    if (third) {
+      await updateTeamScore(third.team, thirdPoint);
+    }
+
+    // Clear form
+    setResultProgramme("");
+    setFirstChest("");
+    setSecondChest("");
+    setThirdChest("");
+
+    // Reload data
+    await loadResults();
+    await loadTeams();
+
+    alert("Result Published Successfully!");
+
+  } catch (error) {
+    console.error("Error publishing result:", error);
+    alert("Something went wrong while publishing result.");
+  }
+};
+   // ==========================
+// Result Edit / Delete
+// ==========================
+
+const editResult = (item: any) => {
+  setEditResultId(item.id);
+
+  setResultProgramme(item.programmeId || "");
+
+  setEditFirstChest(item.firstChest || "");
+  setEditSecondChest(item.secondChest || "");
+  setEditThirdChest(item.thirdChest || "");
+};
+
+const updateResult = async () => {
+  if (!editResultId) {
+    alert("Please select a result");
+    return;
+  }
+
+  if (
+    !editFirstChest ||
+    !editSecondChest ||
+    !editThirdChest
+  ) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  try {
+    await updateDoc(
+      doc(db, "results", editResultId),
+      {
+        firstChest: editFirstChest,
+        secondChest: editSecondChest,
+        thirdChest: editThirdChest,
+      }
+    );
 
     setEditResultId("");
     setEditFirstChest("");
@@ -724,21 +674,31 @@ const publishResult = async () => {
     setEditThirdChest("");
     setResultProgramme("");
 
-    loadResults();
+    await loadResults();
 
-    alert("Result Updated Successfully");
-  };
+    alert("Result Updated Successfully!");
+  } catch (error) {
+    console.error("Error updating result:", error);
+    alert("Something went wrong while updating result.");
+  }
+};
 
-  const deleteResult = async (id: string) => {
-    if (!confirm("Delete this result?")) return;
+const deleteResult = async (id: string) => {
+  if (!confirm("Delete this result?")) return;
 
-    await deleteDoc(doc(db, "results", id));
+  try {
+    await deleteDoc(
+      doc(db, "results", id)
+    );
 
-    loadResults();
+    await loadResults();
 
-    alert("Result Deleted Successfully");
-  };
-
+    alert("Result Deleted Successfully!");
+  } catch (error) {
+    console.error("Error deleting result:", error);
+    alert("Something went wrong while deleting result.");
+  }
+};
   // ==========================
   // Start JSX
   // ==========================

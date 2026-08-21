@@ -13,6 +13,7 @@ import AdminDashboardNew from "./pages/AdminDashboardNew";
 import CandidateRegistration from "./pages/CandidateRegistration";
 import Leaderboard from "./pages/Leaderboard";
 import AdminSettings from "./pages/AdminSettings";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -28,9 +29,14 @@ function App() {
         <Route path="/announcements" element={<Announcements />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboardNew />} /><Route
+        <Route
   path="/candidate-registration"
-  element={<CandidateRegistration />}
+  element={
+    <ProtectedRoute>
+      <CandidateRegistration />
+    </ProtectedRoute>
+  }
+/>
 />
 <Route path="/leaderboard" element={<Leaderboard />} />
 <Route path="/admin-settings" element={<AdminSettings />} />
