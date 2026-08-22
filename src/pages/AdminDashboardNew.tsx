@@ -1201,9 +1201,9 @@ const deleteResult = async (id: string) => {
   <option value="Group">Group</option>
 </select>
 
-   <select
-  value={programmeCategory}
-  onChange={(e) => setProgrammeCategory(e.target.value)}
+ <select
+  value={candidateCategory}
+  onChange={(e) => setCandidateCategory(e.target.value)}
   className="w-full border p-2 rounded"
 >
   <option value="K">Kids</option>
@@ -1482,8 +1482,8 @@ const deleteResult = async (id: string) => {
               </select>
 
     <select
-  value={programmeCategory}
-  onChange={(e) => setProgrammeCategory(e.target.value)}
+  value={candidateCategory}
+onChange={(e) => setCandidateCategory(e.target.value)}
   className="w-full border p-2 rounded"
 >
   <option value="K">Kids</option>
