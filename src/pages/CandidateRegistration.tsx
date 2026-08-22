@@ -350,6 +350,7 @@ function CandidateRegistration() {
           />
 
           {/* Category */}
+
 <select
   value={category}
   onChange={(e) => {
@@ -377,7 +378,13 @@ function CandidateRegistration() {
   <option value="SS">
     Super Senior
   </option>
+  <option value="G">
+    General
+  </option>
 </select>
+
+
+
 
           {/* =========================
               Multiple Programmes
