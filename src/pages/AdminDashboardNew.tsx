@@ -531,6 +531,109 @@ const deleteProgramme = async (id: string) => {
     // ==========================
   // Publish Result
   // ==========================
+// ==========================
+// Recalculate Team Scores
+// ==========================
+const recalculateTeamScores = async () => {
+  try {
+    // Get all teams
+    const teamSnap = await getDocs(
+      collection(db, "teams")
+    );
+
+    const teamData = teamSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }));
+
+    // Get all published results
+    const resultSnap = await getDocs(
+      collection(db, "results")
+    );
+
+    const resultData = resultSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }));
+
+    // ==========================
+    // Calculate scores
+    // ==========================
+
+    const teamScores: {
+      [key: string]: number;
+    } = {};
+
+    resultData.forEach((result: any) => {
+      const firstTeam =
+        String(result.firstTeam || "").trim();
+
+      const secondTeam =
+        String(result.secondTeam || "").trim();
+
+      const thirdTeam =
+        String(result.thirdTeam || "").trim();
+
+      const firstPoint =
+        Number(result.firstPoint) || 0;
+
+      const secondPoint =
+        Number(result.secondPoint) || 0;
+
+      const thirdPoint =
+        Number(result.thirdPoint) || 0;
+
+      // 1st
+      if (firstTeam) {
+        teamScores[firstTeam] =
+          (teamScores[firstTeam] || 0) +
+          firstPoint;
+      }
+
+      // 2nd
+      if (secondTeam) {
+        teamScores[secondTeam] =
+          (teamScores[secondTeam] || 0) +
+          secondPoint;
+      }
+
+      // 3rd
+      if (thirdTeam) {
+        teamScores[thirdTeam] =
+          (teamScores[thirdTeam] || 0) +
+          thirdPoint;
+      }
+    });
+
+    // ==========================
+    // Update teams
+    // ==========================
+for (const team of teamData as any[]) {
+  const teamName =
+    String(team.teamName || "").trim();
+
+  const totalScore =
+    teamScores[teamName] || 0;
+
+  await updateDoc(
+    doc(db, "teams", team.id),
+    {
+      score: totalScore,
+    }
+  );
+}
+    console.log(
+      "Team scores recalculated successfully"
+    );
+
+  } catch (error) {
+    console.error(
+      "Error recalculating team scores:",
+      error
+    );
+  }
+};
+
 const publishResult = async () => {
   if (
     !resultProgramme ||
@@ -543,59 +646,23 @@ const publishResult = async () => {
   }
 
   try {
+    // ==========================
     // Find selected programme
+    // ==========================
+
     const programme = programmes.find(
       (item: any) => item.id === resultProgramme
     );
 
-   
-    
     if (!programme) {
       alert("Programme not found");
       return;
     }
-// Check selected category
-if (programme.category !== resultCategory) {
-  alert("Selected programme does not belong to this category.");
-  return;
-}
 
-    // Check duplicate result
-    const alreadyPublished = publishedResults.find(
-      (item: any) => item.programmeId === resultProgramme
-    );
+    // ==========================
+    // Find candidates by Chest No
+    // ==========================
 
-    if (alreadyPublished) {
-      alert("Result already published!");
-      return;
-    }
-
-    // Points
-    let firstPoint = 5;
-    let secondPoint = 3;
-    let thirdPoint = 1;
-
-    if (programme.programmeType === "Group") {
-      firstPoint = 10;
-      secondPoint = 5;
-      thirdPoint = 3;
-    }
-
-    // Save result
-    await addDoc(collection(db, "results"), {
-      programmeId: resultProgramme,
-      firstChest,
-      secondChest,
-      thirdChest,
-      programmeType:
-        programme.programmeType || "Individual",
-      firstPoint,
-      secondPoint,
-      thirdPoint,
-      createdAt: new Date(),
-    });
-
-    // Find candidates
     const first = candidates.find(
       (c: any) =>
         String(c.chestNo) === String(firstChest)
@@ -611,67 +678,133 @@ if (programme.category !== resultCategory) {
         String(c.chestNo) === String(thirdChest)
     );
 
-    // Check candidates belong to selected category
+    // ==========================
+    // Check candidates exist
+    // ==========================
 
-if (
-  (first && first.category !== programme.category) ||
-  (second && second.category !== programme.category) ||
-  (third && third.category !== programme.category)
-) {
-  alert(
-    "One or more chest numbers do not belong to the selected category."
-  );
-  return;
-}
-
-    // Update team scores
-    const updateTeamScore = async (
-      teamName: string,
-      points: number
-    ) => {
-      const team = teams.find(
-        (t: any) => t.teamName === teamName
+    if (!first || !second || !third) {
+      alert(
+        "One or more chest numbers are not found."
       );
+      return;
+    }
 
-      if (team) {
-        await updateDoc(
-          doc(db, "teams", team.id),
-          {
-            score: (team.score || 0) + points,
-          }
-        );
+    // ==========================
+    // Check category
+    // ==========================
+
+    if (
+      first.category !== programme.category ||
+      second.category !== programme.category ||
+      third.category !== programme.category
+    ) {
+      alert(
+        "One or more chest numbers do not belong to the selected category."
+      );
+      return;
+    }
+
+    // ==========================
+    // Check duplicate result
+    // ==========================
+
+    const alreadyPublished = publishedResults.find(
+      (item: any) =>
+        item.programmeId === resultProgramme
+    );
+
+    if (alreadyPublished) {
+      alert("Result already published!");
+      return;
+    }
+
+    // ==========================
+    // Points
+    // ==========================
+
+    let firstPoint = 5;
+    let secondPoint = 3;
+    let thirdPoint = 1;
+
+    if (programme.programmeType === "Group") {
+      firstPoint = 10;
+      secondPoint = 5;
+      thirdPoint = 3;
+    }
+
+  
+
+    // ==========================
+    // Save Result
+    // ==========================
+
+    await addDoc(
+      collection(db, "results"),
+      {
+        programmeId: resultProgramme,
+
+        category: programme.category,
+
+        firstChest,
+        secondChest,
+        thirdChest,
+
+        firstName: first.candidateName,
+        secondName: second.candidateName,
+        thirdName: third.candidateName,
+
+        firstTeam: first.team,
+        secondTeam: second.team,
+        thirdTeam: third.team,
+
+        programmeType:
+          programme.programmeType ||
+          "Individual",
+
+        firstPoint,
+        secondPoint,
+        thirdPoint,
+
+        createdAt: new Date(),
       }
-    };
+    );
 
-    if (first) {
-      await updateTeamScore(first.team, firstPoint);
-    }
+    await recalculateTeamScores();
 
-    if (second) {
-      await updateTeamScore(second.team, secondPoint);
-    }
-
-    if (third) {
-      await updateTeamScore(third.team, thirdPoint);
-    }
-
+    // ==========================
     // Clear form
+    // ==========================
+
     setResultProgramme("");
     setFirstChest("");
     setSecondChest("");
     setThirdChest("");
 
+    // ==========================
     // Reload data
+    // ==========================
+
     await loadResults();
     await loadTeams();
 
-    alert("Result Published Successfully!");
+    alert(
+      "Result Published Successfully!"
+    );
 
   } catch (error) {
-    console.error("Error publishing result:", error);
-    alert("Something went wrong while publishing result.");
+    console.error(
+      "Error publishing result:",
+      error
+    );
+
+    alert(
+      "Something went wrong while publishing result."
+    );
   }
 };
+
+
+
    // ==========================
 // Result Edit / Delete
 // ==========================
