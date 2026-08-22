@@ -118,7 +118,7 @@ function AdminDashboardNew() {
   // Result States
   // ==========================
 
-const [resultCategory, setResultCategory] = useState("");  
+
 
   const [resultProgramme, setResultProgramme] = useState("");
 
