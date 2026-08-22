@@ -2,19 +2,24 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 
+type DataItem = Record<string, any>;
+
 function Results() {
-  const [results, setResults] = useState<any[]>([]);
-  const [programmes, setProgrammes] = useState<any[]>([]);
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [results, setResults] = useState<DataItem[]>([]);
+  const [programmes, setProgrammes] = useState<DataItem[]>([]);
+  const [candidates, setCandidates] = useState<DataItem[]>([]);
+  const [teams, setTeams] = useState<DataItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // ==========================
-  // Category Name
-  // ==========================
+  // =====================================================
+  // CATEGORY NAME
+  // =====================================================
 
-  const getCategoryName = (category: string) => {
-    switch (category) {
+  const getCategoryName = (category: any) => {
+    const value = String(category || "").trim().toUpperCase();
+
+    switch (value) {
       case "K":
         return "Kids";
 
@@ -35,9 +40,64 @@ function Results() {
     }
   };
 
-  // ==========================
-  // Load All Data
-  // ==========================
+  // =====================================================
+  // PROGRAMME TYPE
+  // =====================================================
+
+  const getProgrammeType = (
+    programme: DataItem | undefined,
+    result: DataItem
+  ) => {
+    const type =
+      programme?.programmeType ||
+      result?.programmeType ||
+      "Individual";
+
+    const normalized = String(type)
+      .trim()
+      .toLowerCase();
+
+    if (normalized === "group") {
+      return "Group";
+    }
+
+    return "Individual";
+  };
+
+  // =====================================================
+  // POINT SYSTEM
+  //
+  // INDIVIDUAL
+  // 1st = 5
+  // 2nd = 3
+  // 3rd = 1
+  //
+  // GROUP
+  // 1st = 10
+  // 2nd = 5
+  // 3rd = 3
+  // =====================================================
+
+  const getPoints = (
+    programmeType: string,
+    position: number
+  ) => {
+    if (programmeType === "Group") {
+      if (position === 1) return 10;
+      if (position === 2) return 5;
+      if (position === 3) return 3;
+    }
+
+    if (position === 1) return 5;
+    if (position === 2) return 3;
+    if (position === 3) return 1;
+
+    return 0;
+  };
+
+  // =====================================================
+  // LOAD ALL DATA
+  // =====================================================
 
   useEffect(() => {
     loadData();
@@ -46,465 +106,707 @@ function Results() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      // ==========================
-      // Results
-      // ==========================
+      // =================================================
+      // RESULTS
+      // =================================================
 
-      const resultSnap = await getDocs(
+      const resultsSnapshot = await getDocs(
         collection(db, "results")
       );
 
-      const resultData = resultSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const resultData: DataItem[] =
+        resultsSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
 
-      // ==========================
-      // Programmes
-      // ==========================
+      // =================================================
+      // SCHEDULE / PROGRAMMES
+      // =================================================
 
-      const programmeSnap = await getDocs(
+      const scheduleSnapshot = await getDocs(
         collection(db, "schedule")
       );
 
-      const programmeData = programmeSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const programmeData: DataItem[] =
+        scheduleSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
 
-      // ==========================
-      // Candidates
-      // ==========================
+      // =================================================
+      // CANDIDATES
+      // =================================================
 
-      const candidateSnap = await getDocs(
+      const candidatesSnapshot = await getDocs(
         collection(db, "candidates")
       );
 
-      const candidateData = candidateSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const candidateData: DataItem[] =
+        candidatesSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
 
-      // ==========================
-      // Teams
-      // ==========================
+      // =================================================
+      // TEAMS
+      // =================================================
 
-      const teamSnap = await getDocs(
+      const teamsSnapshot = await getDocs(
         collection(db, "teams")
       );
 
-      const teamData = teamSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const teamData: DataItem[] =
+        teamsSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
 
-      // ==========================
-      // Sort Results
-      // ==========================
+      // =================================================
+      // SORT RESULTS
+      // =================================================
 
-      resultData.sort((a: any, b: any) => {
-        const aTime = a.createdAt?.seconds || 0;
-        const bTime = b.createdAt?.seconds || 0;
+      resultData.sort((a, b) => {
+        const aSeconds =
+          a?.createdAt?.seconds || 0;
 
-        return bTime - aTime;
+        const bSeconds =
+          b?.createdAt?.seconds || 0;
+
+        return bSeconds - aSeconds;
       });
 
-      // ==========================
-      // Sort Teams
-      // ==========================
+      // =================================================
+      // TEAM SCORE CALCULATION
+      // =================================================
 
-      teamData.sort(
-        (a: any, b: any) =>
-          (b.score || 0) - (a.score || 0)
+      const scores: Record<string, number> = {};
+
+      resultData.forEach((result) => {
+        // -------------------------------------------------
+        // FIND PROGRAMME
+        // -------------------------------------------------
+
+        const programme = programmeData.find(
+          (item) =>
+            String(item.id) ===
+            String(result?.programmeId)
+        );
+
+        // -------------------------------------------------
+        // PROGRAMME TYPE
+        // -------------------------------------------------
+
+        const programmeType =
+          getProgrammeType(
+            programme,
+            result
+          );
+
+        // =================================================
+        // FIRST PLACE
+        // =================================================
+
+        const firstCandidate =
+          candidateData.find(
+            (candidate) =>
+              String(candidate?.chestNo) ===
+              String(result?.firstChest)
+          );
+
+        const firstTeam = String(
+          result?.firstTeam ||
+            firstCandidate?.team ||
+            ""
+        ).trim();
+
+        if (
+          firstTeam &&
+          firstTeam !== "-"
+        ) {
+          const points = getPoints(
+            programmeType,
+            1
+          );
+
+          scores[firstTeam] =
+            (scores[firstTeam] || 0) +
+            points;
+        }
+
+        // =================================================
+        // SECOND PLACE
+        // =================================================
+
+        const secondCandidate =
+          candidateData.find(
+            (candidate) =>
+              String(candidate?.chestNo) ===
+              String(result?.secondChest)
+          );
+
+        const secondTeam = String(
+          result?.secondTeam ||
+            secondCandidate?.team ||
+            ""
+        ).trim();
+
+        if (
+          secondTeam &&
+          secondTeam !== "-"
+        ) {
+          const points = getPoints(
+            programmeType,
+            2
+          );
+
+          scores[secondTeam] =
+            (scores[secondTeam] || 0) +
+            points;
+        }
+
+        // =================================================
+        // THIRD PLACE
+        // =================================================
+
+        const thirdCandidate =
+          candidateData.find(
+            (candidate) =>
+              String(candidate?.chestNo) ===
+              String(result?.thirdChest)
+          );
+
+        const thirdTeam = String(
+          result?.thirdTeam ||
+            thirdCandidate?.team ||
+            ""
+        ).trim();
+
+        if (
+          thirdTeam &&
+          thirdTeam !== "-"
+        ) {
+          const points = getPoints(
+            programmeType,
+            3
+          );
+
+          scores[thirdTeam] =
+            (scores[thirdTeam] || 0) +
+            points;
+        }
+      });
+
+      // =================================================
+      // ADD SCORE TO TEAMS
+      // =================================================
+
+      const updatedTeams: DataItem[] =
+        teamData.map((team) => {
+          const teamName = String(
+            team?.teamName || ""
+          ).trim();
+
+          return {
+            ...team,
+            score:
+              scores[teamName] || 0,
+          };
+        });
+
+      // =================================================
+      // SORT TEAMS
+      // =================================================
+
+      updatedTeams.sort(
+        (a, b) =>
+          Number(b?.score || 0) -
+          Number(a?.score || 0)
       );
+
+      // =================================================
+      // SAVE TO STATE
+      // =================================================
 
       setResults(resultData);
       setProgrammes(programmeData);
       setCandidates(candidateData);
-      setTeams(teamData);
+      setTeams(updatedTeams);
 
-    } catch (error) {
+    } catch (err) {
       console.error(
-        "Error loading results:",
-        error
+        "Results loading error:",
+        err
+      );
+
+      setError(
+        "Results load ചെയ്യാൻ കഴിഞ്ഞില്ല."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // ==========================
-  // Find Candidate
-  // ==========================
+  // =====================================================
+  // FIND CANDIDATE
+  // =====================================================
 
   const findCandidate = (
-    chestNo: string
+    chestNo: any
   ) => {
+    if (
+      chestNo === undefined ||
+      chestNo === null ||
+      chestNo === ""
+    ) {
+      return undefined;
+    }
+
     return candidates.find(
-      (candidate: any) =>
-        String(candidate.chestNo) ===
+      (candidate) =>
+        String(candidate?.chestNo) ===
         String(chestNo)
     );
   };
 
-  // ==========================
-  // Loading
-  // ==========================
+  // =====================================================
+  // LOADING SCREEN
+  // =====================================================
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-5xl mb-4">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl shadow-xl p-10 text-center">
+          <div className="text-6xl mb-4">
             🏆
           </div>
 
-          <p className="text-xl font-semibold text-gray-600">
+          <h2 className="text-2xl font-bold text-gray-800">
             Loading Results...
+          </h2>
+
+          <p className="text-gray-500 mt-2">
+            Please wait
           </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+  // =====================================================
+  // ERROR SCREEN
+  // =====================================================
 
-      {/* ==========================
-          PAGE HEADER
-      ========================== */}
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl shadow-xl p-10 text-center max-w-md w-full">
+          <div className="text-5xl mb-4">
+            ⚠️
+          </div>
+
+          <h2 className="text-2xl font-bold text-red-600">
+            Error
+          </h2>
+
+          <p className="text-gray-600 mt-3">
+            {error}
+          </p>
+
+          <button
+            onClick={loadData}
+            className="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // =====================================================
+  // MAIN PAGE
+  // =====================================================
+
+  return (
+    <div className="min-h-screen bg-gray-100 px-4 py-6 md:px-8 md:py-10">
 
       <div className="max-w-7xl mx-auto">
 
+        {/* =================================================
+            PAGE HEADER
+        ================================================= */}
+
         <div className="text-center mb-10">
 
-          <div className="text-5xl mb-3">
+          <div className="text-6xl mb-3">
             🏆
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-green-700">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-green-700">
             Grand Results
           </h1>
 
-          <p className="text-gray-500 mt-2">
+          <p className="text-gray-500 mt-3 text-lg">
             Meelad Fest Results
           </p>
 
         </div>
 
-        {/* ==========================
+        {/* =================================================
             NO RESULTS
-        ========================== */}
+        ================================================= */}
 
-        {results.length === 0 ? (
+        {results.length === 0 && (
+          <div className="bg-white rounded-3xl shadow-lg p-10 text-center">
 
-          <div className="bg-white rounded-2xl shadow p-10 text-center">
-
-            <div className="text-5xl mb-4">
+            <div className="text-6xl mb-5">
               🏆
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-700">
+            <h2 className="text-2xl font-bold text-gray-800">
               Results Not Published Yet
             </h2>
 
-            <p className="text-gray-500 mt-2">
+            <p className="text-gray-500 mt-3">
               Please check again later.
             </p>
 
           </div>
+        )}
 
-        ) : (
+        {/* =================================================
+            RESULTS
+        ================================================= */}
 
-          /* ==========================
-             RESULT LIST
-          ========================== */
+        <div className="space-y-8">
 
-          <div className="space-y-8">
+          {results.map((result) => {
 
-            {results.map((result: any) => {
+            // =============================================
+            // PROGRAMME
+            // =============================================
 
-              // ==========================
-              // Find Programme
-              // ==========================
+            const programme =
+              programmes.find(
+                (item) =>
+                  String(item.id) ===
+                  String(result?.programmeId)
+              );
 
-              const programme =
-                programmes.find(
-                  (p: any) =>
-                    p.id === result.programmeId
-                );
+            // =============================================
+            // PROGRAMME TYPE
+            // =============================================
 
-              // ==========================
-              // OLD RESULT SUPPORT
-              // ==========================
+            const programmeType =
+              getProgrammeType(
+                programme,
+                result
+              );
 
-              const firstCandidate =
-                findCandidate(
-                  result.firstChest
-                );
+            // =============================================
+            // CATEGORY
+            // =============================================
 
-              const secondCandidate =
-                findCandidate(
-                  result.secondChest
-                );
+            const category =
+              programme?.category ||
+              result?.category ||
+              "-";
 
-              const thirdCandidate =
-                findCandidate(
-                  result.thirdChest
-                );
+            // =============================================
+            // POINTS
+            // =============================================
 
-              // ==========================
-              // New Result Data
-              // ==========================
+            const firstPoints =
+              getPoints(
+                programmeType,
+                1
+              );
 
-              const firstName =
-                result.firstName ||
-                firstCandidate?.candidateName ||
-                "-";
+            const secondPoints =
+              getPoints(
+                programmeType,
+                2
+              );
 
-              const firstTeam =
-                result.firstTeam ||
-                firstCandidate?.team ||
-                "-";
+            const thirdPoints =
+              getPoints(
+                programmeType,
+                3
+              );
 
-              const firstChest =
-                result.firstChest ||
-                firstCandidate?.chestNo ||
-                "-";
+            // =============================================
+            // CANDIDATES
+            // =============================================
 
-              const secondName =
-                result.secondName ||
-                secondCandidate?.candidateName ||
-                "-";
+            const firstCandidate =
+              findCandidate(
+                result?.firstChest
+              );
 
-              const secondTeam =
-                result.secondTeam ||
-                secondCandidate?.team ||
-                "-";
+            const secondCandidate =
+              findCandidate(
+                result?.secondChest
+              );
 
-              const secondChest =
-                result.secondChest ||
-                secondCandidate?.chestNo ||
-                "-";
+            const thirdCandidate =
+              findCandidate(
+                result?.thirdChest
+              );
 
-              const thirdName =
-                result.thirdName ||
-                thirdCandidate?.candidateName ||
-                "-";
+            // =============================================
+            // FIRST
+            // =============================================
 
-              const thirdTeam =
-                result.thirdTeam ||
-                thirdCandidate?.team ||
-                "-";
+            const firstName =
+              result?.firstName ||
+              firstCandidate?.candidateName ||
+              "-";
 
-              const thirdChest =
-                result.thirdChest ||
-                thirdCandidate?.chestNo ||
-                "-";
+            const firstChest =
+              result?.firstChest ||
+              firstCandidate?.chestNo ||
+              "-";
 
-              return (
+            const firstTeam =
+              result?.firstTeam ||
+              firstCandidate?.team ||
+              "-";
 
-                <div
-                  key={result.id}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden"
-                >
+            // =============================================
+            // SECOND
+            // =============================================
 
-                  {/* ==========================
-                      PROGRAMME HEADER
-                  ========================== */}
+            const secondName =
+              result?.secondName ||
+              secondCandidate?.candidateName ||
+              "-";
 
-                  <div className="p-5 md:p-6 border-b">
+            const secondChest =
+              result?.secondChest ||
+              secondCandidate?.chestNo ||
+              "-";
 
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+            const secondTeam =
+              result?.secondTeam ||
+              secondCandidate?.team ||
+              "-";
 
-                      <div>
+            // =============================================
+            // THIRD
+            // =============================================
 
-                        <h2 className="text-2xl md:text-3xl font-bold text-green-700">
-                          {programme?.programmeName ||
-                            "Programme"}
-                        </h2>
+            const thirdName =
+              result?.thirdName ||
+              thirdCandidate?.candidateName ||
+              "-";
 
-                        <div className="flex flex-wrap gap-2 mt-3">
+            const thirdChest =
+              result?.thirdChest ||
+              thirdCandidate?.chestNo ||
+              "-";
 
-                          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {getCategoryName(
-                              programme?.category ||
-                              result.category
-                            )}
-                          </span>
+            const thirdTeam =
+              result?.thirdTeam ||
+              thirdCandidate?.team ||
+              "-";
 
-                          <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {programme?.programmeType ||
-                              result.programmeType ||
-                              "Individual"}
-                          </span>
+            return (
+              <div
+                key={String(result.id)}
+                className="bg-white rounded-3xl shadow-lg overflow-hidden"
+              >
 
-                        </div>
+                {/* =======================================
+                    PROGRAMME HEADER
+                ======================================= */}
 
-                      </div>
+                <div className="bg-gradient-to-r from-green-700 to-green-600 text-white p-5 md:p-7">
 
-                      <div className="text-sm text-gray-500">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
 
-                        {programme?.date && (
-                          <p>
-                            📅 {programme.date}
-                          </p>
-                        )}
+                    <div>
 
-                        {programme?.venue && (
-                          <p>
-                            📍 {programme.venue}
-                          </p>
-                        )}
+                      <h2 className="text-2xl md:text-3xl font-bold">
+                        {programme?.programmeName ||
+                          result?.programmeName ||
+                          "Programme"}
+                      </h2>
+
+                      <div className="flex flex-wrap gap-2 mt-4">
+
+                        <span className="bg-white/20 px-4 py-1.5 rounded-full text-sm font-semibold">
+                          {getCategoryName(
+                            category
+                          )}
+                        </span>
+
+                        <span className="bg-white/20 px-4 py-1.5 rounded-full text-sm font-semibold">
+                          {programmeType}
+                        </span>
 
                       </div>
 
                     </div>
 
+                    <div className="text-sm md:text-base">
+
+                      {programme?.date && (
+                        <p>
+                          📅 {programme.date}
+                        </p>
+                      )}
+
+                      {programme?.time && (
+                        <p className="mt-1">
+                          ⏰ {programme.time}
+                        </p>
+                      )}
+
+                      {programme?.venue && (
+                        <p className="mt-1">
+                          📍 {programme.venue}
+                        </p>
+                      )}
+
+                    </div>
+
                   </div>
 
+                </div>
 
-                  {/* ==========================
-                      WINNERS
-                  ========================== */}
+                {/* =======================================
+                    WINNERS
+                ======================================= */}
 
-                  <div className="p-5 md:p-6">
+                <div className="p-5 md:p-7">
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
-                      {/* ==========================
-                          FIRST
-                      ========================== */}
+                    {/* =================================
+                        FIRST
+                    ================================= */}
 
-                      <div className="relative bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-5 text-center">
+                    <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 text-center">
 
-                        <div className="text-5xl mb-3">
-                          🥇
-                        </div>
+                      <div className="text-6xl mb-3">
+                        🥇
+                      </div>
 
-                        <h3 className="text-xl font-bold text-yellow-700 mb-4">
-                          First Prize
-                        </h3>
+                      <p className="text-sm font-bold text-yellow-700 uppercase tracking-wide">
+                        First Prize
+                      </p>
 
-                        <p className="text-2xl font-bold text-gray-800">
-                          {firstName}
+                      <h3 className="text-2xl font-bold text-gray-800 mt-3">
+                        {firstName}
+                      </h3>
+
+                      <div className="mt-5 space-y-2 text-gray-600">
+
+                        <p>
+                          <span className="font-semibold">
+                            Chest:
+                          </span>{" "}
+                          {firstChest}
                         </p>
 
-                        <div className="mt-4 space-y-2 text-gray-600">
-
-                          <p>
-                            <strong>
-                              Chest No:
-                            </strong>{" "}
-                            {firstChest}
-                          </p>
-
-                          <p>
-                            <strong>
-                              Team:
-                            </strong>{" "}
-                            {firstTeam}
-                          </p>
-
-                        </div>
-
-                        {result.firstPoint && (
-                          <div className="mt-4 inline-block bg-yellow-200 text-yellow-800 px-4 py-1 rounded-full font-bold">
-                            +{result.firstPoint} Points
-                          </div>
-                        )}
+                        <p>
+                          <span className="font-semibold">
+                            Team:
+                          </span>{" "}
+                          {firstTeam}
+                        </p>
 
                       </div>
 
+                      <div className="mt-5 inline-block bg-yellow-200 text-yellow-800 px-5 py-2 rounded-full font-bold">
+                        +{firstPoints} Points
+                      </div>
 
-                      {/* ==========================
-                          SECOND
-                      ========================== */}
+                    </div>
 
-                      <div className="relative bg-gray-50 border-2 border-gray-300 rounded-2xl p-5 text-center">
+                    {/* =================================
+                        SECOND
+                    ================================= */}
 
-                        <div className="text-5xl mb-3">
-                          🥈
-                        </div>
+                    <div className="bg-gray-50 border-2 border-gray-300 rounded-2xl p-6 text-center">
 
-                        <h3 className="text-xl font-bold text-gray-700 mb-4">
-                          Second Prize
-                        </h3>
+                      <div className="text-6xl mb-3">
+                        🥈
+                      </div>
 
-                        <p className="text-2xl font-bold text-gray-800">
-                          {secondName}
+                      <p className="text-sm font-bold text-gray-600 uppercase tracking-wide">
+                        Second Prize
+                      </p>
+
+                      <h3 className="text-2xl font-bold text-gray-800 mt-3">
+                        {secondName}
+                      </h3>
+
+                      <div className="mt-5 space-y-2 text-gray-600">
+
+                        <p>
+                          <span className="font-semibold">
+                            Chest:
+                          </span>{" "}
+                          {secondChest}
                         </p>
 
-                        <div className="mt-4 space-y-2 text-gray-600">
-
-                          <p>
-                            <strong>
-                              Chest No:
-                            </strong>{" "}
-                            {secondChest}
-                          </p>
-
-                          <p>
-                            <strong>
-                              Team:
-                            </strong>{" "}
-                            {secondTeam}
-                          </p>
-
-                        </div>
-
-                        {result.secondPoint && (
-                          <div className="mt-4 inline-block bg-gray-200 text-gray-700 px-4 py-1 rounded-full font-bold">
-                            +{result.secondPoint} Points
-                          </div>
-                        )}
+                        <p>
+                          <span className="font-semibold">
+                            Team:
+                          </span>{" "}
+                          {secondTeam}
+                        </p>
 
                       </div>
 
+                      <div className="mt-5 inline-block bg-gray-200 text-gray-700 px-5 py-2 rounded-full font-bold">
+                        +{secondPoints} Points
+                      </div>
 
-                      {/* ==========================
-                          THIRD
-                      ========================== */}
+                    </div>
 
-                      <div className="relative bg-orange-50 border-2 border-orange-300 rounded-2xl p-5 text-center">
+                    {/* =================================
+                        THIRD
+                    ================================= */}
 
-                        <div className="text-5xl mb-3">
-                          🥉
-                        </div>
+                    <div className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-6 text-center">
 
-                        <h3 className="text-xl font-bold text-orange-700 mb-4">
-                          Third Prize
-                        </h3>
+                      <div className="text-6xl mb-3">
+                        🥉
+                      </div>
 
-                        <p className="text-2xl font-bold text-gray-800">
-                          {thirdName}
+                      <p className="text-sm font-bold text-orange-700 uppercase tracking-wide">
+                        Third Prize
+                      </p>
+
+                      <h3 className="text-2xl font-bold text-gray-800 mt-3">
+                        {thirdName}
+                      </h3>
+
+                      <div className="mt-5 space-y-2 text-gray-600">
+
+                        <p>
+                          <span className="font-semibold">
+                            Chest:
+                          </span>{" "}
+                          {thirdChest}
                         </p>
 
-                        <div className="mt-4 space-y-2 text-gray-600">
+                        <p>
+                          <span className="font-semibold">
+                            Team:
+                          </span>{" "}
+                          {thirdTeam}
+                        </p>
 
-                          <p>
-                            <strong>
-                              Chest No:
-                            </strong>{" "}
-                            {thirdChest}
-                          </p>
+                      </div>
 
-                          <p>
-                            <strong>
-                              Team:
-                            </strong>{" "}
-                            {thirdTeam}
-                          </p>
-
-                        </div>
-
-                        {result.thirdPoint && (
-                          <div className="mt-4 inline-block bg-orange-200 text-orange-800 px-4 py-1 rounded-full font-bold">
-                            +{result.thirdPoint} Points
-                          </div>
-                        )}
-
+                      <div className="mt-5 inline-block bg-orange-200 text-orange-800 px-5 py-2 rounded-full font-bold">
+                        +{thirdPoints} Points
                       </div>
 
                     </div>
@@ -513,110 +815,101 @@ function Results() {
 
                 </div>
 
-              );
-            })}
+              </div>
+            );
+          })}
 
-          </div>
+        </div>
 
-        )}
-
-
-        {/* ==================================================
+        {/* =================================================
             OVERALL CHAMPION
-        ================================================== */}
+        ================================================= */}
 
         {teams.length > 0 && (
 
-          <div className="mt-14">
+          <section className="mt-14">
 
             <div className="bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 rounded-3xl shadow-xl p-6 md:p-10">
 
               <div className="text-center text-white mb-8">
 
-                <div className="text-5xl mb-3">
+                <div className="text-6xl mb-3">
                   👑
                 </div>
 
-                <h2 className="text-3xl md:text-4xl font-bold">
+                <h2 className="text-3xl md:text-4xl font-extrabold">
                   Overall Champion
                 </h2>
 
-                <p className="mt-2 opacity-90">
+                <p className="mt-2">
                   Meelad Fest Team Championship
                 </p>
 
               </div>
 
-
-              {/* ==========================
-                  TOP 3
-              ========================== */}
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
-                {/* Champion */}
+                {/* CHAMPION */}
 
-                <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
+                <div className="bg-white rounded-2xl shadow-lg p-7 text-center">
 
-                  <div className="text-5xl mb-3">
+                  <div className="text-6xl">
                     🥇
                   </div>
 
-                  <p className="text-sm text-gray-500 font-semibold">
+                  <p className="text-sm font-bold text-gray-500 mt-3">
                     CHAMPION
                   </p>
 
-                  <h3 className="text-2xl font-bold text-yellow-600 mt-2">
+                  <h3 className="text-2xl font-extrabold text-yellow-600 mt-2">
                     {teams[0]?.teamName || "-"}
                   </h3>
 
-                  <p className="text-lg font-semibold text-gray-600 mt-2">
+                  <p className="text-lg font-bold text-gray-600 mt-2">
                     {teams[0]?.score || 0} Points
                   </p>
 
                 </div>
 
+                {/* RUNNER UP */}
 
-                {/* Runner Up */}
+                <div className="bg-white rounded-2xl shadow-lg p-7 text-center">
 
-                <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-
-                  <div className="text-5xl mb-3">
+                  <div className="text-6xl">
                     🥈
                   </div>
 
-                  <p className="text-sm text-gray-500 font-semibold">
+                  <p className="text-sm font-bold text-gray-500 mt-3">
                     RUNNER UP
                   </p>
 
-                  <h3 className="text-2xl font-bold text-gray-600 mt-2">
+                  <h3 className="text-2xl font-extrabold text-gray-600 mt-2">
                     {teams[1]?.teamName || "-"}
                   </h3>
 
-                  <p className="text-lg font-semibold text-gray-600 mt-2">
+                  <p className="text-lg font-bold text-gray-600 mt-2">
                     {teams[1]?.score || 0} Points
                   </p>
 
                 </div>
 
+                {/* THIRD */}
 
-                {/* Third */}
+                <div className="bg-white rounded-2xl shadow-lg p-7 text-center">
 
-                <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-
-                  <div className="text-5xl mb-3">
+                  <div className="text-6xl">
                     🥉
                   </div>
 
-                  <p className="text-sm text-gray-500 font-semibold">
+                  <p className="text-sm font-bold text-gray-500 mt-3">
                     THIRD PLACE
                   </p>
 
-                  <h3 className="text-2xl font-bold text-orange-600 mt-2">
+                  <h3 className="text-2xl font-extrabold text-orange-600 mt-2">
                     {teams[2]?.teamName || "-"}
                   </h3>
 
-                  <p className="text-lg font-semibold text-gray-600 mt-2">
+                  <p className="text-lg font-bold text-gray-600 mt-2">
                     {teams[2]?.score || 0} Points
                   </p>
 
@@ -626,26 +919,25 @@ function Results() {
 
             </div>
 
-          </div>
+          </section>
 
         )}
 
-
-        {/* ==================================================
-            FULL TEAM LEADERBOARD
-        ================================================== */}
+        {/* =================================================
+            TEAM LEADERBOARD
+        ================================================= */}
 
         {teams.length > 0 && (
 
-          <div className="mt-14 mb-10">
+          <section className="mt-14 pb-12">
 
             <div className="text-center mb-7">
 
-              <div className="text-4xl mb-2">
+              <div className="text-5xl mb-2">
                 🏆
               </div>
 
-              <h2 className="text-3xl font-bold text-green-700">
+              <h2 className="text-3xl font-extrabold text-green-700">
                 Team Leaderboard
               </h2>
 
@@ -655,81 +947,82 @@ function Results() {
 
             </div>
 
-
             <div className="space-y-3">
 
               {teams.map(
-                (team: any, index: number) => (
+                (team, index) => {
 
-                  <div
-                    key={team.id}
-                    className={`bg-white rounded-xl shadow p-4 md:p-5 flex items-center justify-between ${
-                      index === 0
-                        ? "border-2 border-yellow-400"
-                        : index === 1
-                        ? "border-2 border-gray-300"
-                        : index === 2
-                        ? "border-2 border-orange-300"
-                        : ""
-                    }`}
-                  >
+                  const rankIcon =
+                    index === 0
+                      ? "🥇"
+                      : index === 1
+                      ? "🥈"
+                      : index === 2
+                      ? "🥉"
+                      : String(index + 1);
 
-                    <div className="flex items-center gap-4">
+                  const borderClass =
+                    index === 0
+                      ? "border-yellow-400"
+                      : index === 1
+                      ? "border-gray-300"
+                      : index === 2
+                      ? "border-orange-300"
+                      : "border-transparent";
 
-                      <div className="text-3xl w-10 text-center">
+                  return (
+                    <div
+                      key={String(team?.id)}
+                      className={`bg-white border-2 ${borderClass} rounded-2xl shadow-sm p-4 md:p-5 flex items-center justify-between`}
+                    >
 
-                        {index === 0
-                          ? "🥇"
-                          : index === 1
-                          ? "🥈"
-                          : index === 2
-                          ? "🥉"
-                          : `${index + 1}`}
+                      <div className="flex items-center gap-4">
+
+                        <div className="w-12 text-center text-3xl font-bold">
+                          {rankIcon}
+                        </div>
+
+                        <div>
+
+                          <h3 className="text-lg md:text-xl font-bold text-gray-800">
+                            {team?.teamName || "-"}
+                          </h3>
+
+                          {team?.teamCode && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              Team Code:{" "}
+                              {team.teamCode}
+                            </p>
+                          )}
+
+                        </div>
 
                       </div>
 
-                      <div>
+                      <div className="text-right">
 
-                        <h3 className="text-lg md:text-xl font-bold text-gray-800">
-                          {team.teamName}
-                        </h3>
+                        <p className="text-2xl font-extrabold text-green-700">
+                          {team?.score || 0}
+                        </p>
 
-                        {team.teamCode && (
-                          <p className="text-sm text-gray-500">
-                            Team Code:{" "}
-                            {team.teamCode}
-                          </p>
-                        )}
+                        <p className="text-sm text-gray-500">
+                          Points
+                        </p>
 
                       </div>
 
                     </div>
-
-                    <div className="text-right">
-
-                      <p className="text-2xl font-bold text-green-700">
-                        {team.score || 0}
-                      </p>
-
-                      <p className="text-sm text-gray-500">
-                        Points
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                )
+                  );
+                }
               )}
 
             </div>
 
-          </div>
+          </section>
 
         )}
 
       </div>
-
     </div>
   );
 }
