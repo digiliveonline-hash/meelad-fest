@@ -114,6 +114,8 @@ function AdminDashboardNew() {
   // Result States
   // ==========================
 
+const [resultCategory, setResultCategory] = useState("");  
+
   const [resultProgramme, setResultProgramme] = useState("");
 
   const [firstChest, setFirstChest] = useState("");
@@ -546,10 +548,17 @@ const publishResult = async () => {
       (item: any) => item.id === resultProgramme
     );
 
+   
+    
     if (!programme) {
       alert("Programme not found");
       return;
     }
+// Check selected category
+if (programme.category !== resultCategory) {
+  alert("Selected programme does not belong to this category.");
+  return;
+}
 
     // Check duplicate result
     const alreadyPublished = publishedResults.find(
@@ -601,6 +610,19 @@ const publishResult = async () => {
       (c: any) =>
         String(c.chestNo) === String(thirdChest)
     );
+
+    // Check candidates belong to selected category
+
+if (
+  (first && first.category !== programme.category) ||
+  (second && second.category !== programme.category) ||
+  (third && third.category !== programme.category)
+) {
+  alert(
+    "One or more chest numbers do not belong to the selected category."
+  );
+  return;
+}
 
     // Update team scores
     const updateTeamScore = async (
