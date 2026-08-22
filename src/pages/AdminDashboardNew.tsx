@@ -264,6 +264,7 @@ function AdminDashboardNew() {
   // Programme CRUD
   // ==========================
 const saveProgramme = async () => {
+  console.log("CATEGORY:", programmeCategory);
   if (programmeName.trim() === "") {
     alert("Please enter programme name");
     return;
@@ -295,6 +296,8 @@ const saveProgramme = async () => {
       // =========================
       // UPDATE PROGRAMME
       // =========================
+      console.log("PROGRAMME CATEGORY BEFORE SAVE:", programmeCategory);
+
       await updateDoc(
         doc(db, "schedule", programmeEditId),
         {
@@ -1192,28 +1195,59 @@ const deleteResult = async (id: string) => {
                 }
                 className="w-full border p-2 rounded"
               />
-              <select
+            
+  {/* Programme Type */}
+
+<select
   value={programmeType}
-  onChange={(e) => setProgrammeType(e.target.value)}
+  onChange={(e) =>
+    setProgrammeType(e.target.value)
+  }
   className="w-full border p-2 rounded mb-3"
 >
-  <option value="Individual">Individual</option>
-  <option value="Group">Group</option>
+  <option value="Individual">
+    Individual
+  </option>
+
+  <option value="Group">
+    Group
+  </option>
 </select>
 
- <select
-  value={candidateCategory}
-  onChange={(e) => setCandidateCategory(e.target.value)}
-  className="w-full border p-2 rounded"
+
+{/* Programme Category */}
+
+<select
+  value={programmeCategory}
+  onChange={(e) =>
+    setProgrammeCategory(e.target.value)
+  }
+  className="w-full border p-2 rounded mb-3"
 >
-  <option value="K">Kids</option>
-  <option value="SJ">Sub Junior</option>
-  <option value="J">Junior</option>
-  <option value="S">Senior</option>
-  <option value="SS">Super Senior</option>
-  <option value="G">General</option>
-</select>
+  <option value="K">
+    Kids
+  </option>
 
+  <option value="SJ">
+    Sub Junior
+  </option>
+
+  <option value="J">
+    Junior
+  </option>
+
+  <option value="S">
+    Senior
+  </option>
+
+  <option value="SS">
+    Super Senior
+  </option>
+
+  <option value="G">
+    General
+  </option>
+</select>
               <input
                 type="text"
                 placeholder="Stage"
@@ -1481,10 +1515,12 @@ const deleteResult = async (id: string) => {
                 <option value="Girl">Girl</option>
               </select>
 
-    <select
-  value={candidateCategory}
-onChange={(e) => setCandidateCategory(e.target.value)}
-  className="w-full border p-2 rounded"
+   <select
+  value={programmeCategory}
+  onChange={(e) =>
+    setProgrammeCategory(e.target.value)
+  }
+  className="w-full border p-2 rounded mb-3"
 >
   <option value="K">Kids</option>
   <option value="SJ">Sub Junior</option>
@@ -1493,6 +1529,7 @@ onChange={(e) => setCandidateCategory(e.target.value)}
   <option value="SS">Super Senior</option>
   <option value="G">General</option>
 </select>
+
 
               <select
                 value={selectedTeam}

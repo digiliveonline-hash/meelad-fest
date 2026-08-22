@@ -386,9 +386,10 @@ function CandidateRegistration() {
 
 
 
-          {/* =========================
-              Multiple Programmes
-          ========================= */}
+         {/* =========================
+    Multiple Programmes
+========================= */}
+
 <div className="border rounded-lg p-4 mb-4">
 
   <h2 className="text-lg font-bold mb-3">
@@ -403,43 +404,82 @@ function CandidateRegistration() {
     <div className="grid md:grid-cols-2 gap-3">
 
       {programmeList
-        .filter(
-          (item: any) =>
-            item.category === category
-        )
-        .map(
-          (item: any) => (
-            <label
-              key={item.id}
-              className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition ${
-                programmes.includes(
-                  item.programmeName
-                )
-                  ? "bg-green-100 border-green-600"
-                  : "bg-white"
-              }`}
-            >
+        .filter((item: any) => {
 
-              <input
-                type="checkbox"
-                checked={programmes.includes(
-                  item.programmeName
-                )}
-                onChange={() =>
-                  toggleProgramme(
-                    item.programmeName
-                  )
-                }
-                className="w-5 h-5"
-              />
+          const programmeCategory = String(
+            item.category || ""
+          ).trim().toUpperCase();
 
-              <span className="font-medium">
+          const selectedCategory = String(
+            category || ""
+          ).trim().toUpperCase();
+
+          return programmeCategory === selectedCategory;
+        })
+        .map((item: any) => (
+
+          <label
+            key={item.id}
+            className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition ${
+              programmes.includes(item.programmeName)
+                ? "bg-green-100 border-green-600"
+                : "bg-white"
+            }`}
+          >
+
+            <input
+              type="checkbox"
+              checked={programmes.includes(
+                item.programmeName
+              )}
+              onChange={() =>
+                toggleProgramme(item.programmeName)
+              }
+              className="w-5 h-5"
+            />
+
+            <div>
+              <span className="font-medium block">
                 {item.programmeName}
               </span>
 
-            </label>
-          )
-        )}
+              <span className="text-sm text-gray-500">
+                {item.programmeType || "Individual"}
+              </span>
+            </div>
+
+          </label>
+
+        ))}
+
+    </div>
+  )}
+
+</div>
+
+{/* Selected Programme Count */}
+
+<div className="mt-4">
+
+  <p className="font-semibold text-green-700">
+    Selected Programmes: {programmes.length}
+  </p>
+
+  {programmes.length > 0 && (
+    <div className="flex flex-wrap gap-2 mt-2">
+
+      {programmes.map(
+        (programmeName: string) => (
+
+          <span
+            key={programmeName}
+            className="bg-green-700 text-white px-3 py-1 rounded-full text-sm"
+          >
+            {programmeName}
+          </span>
+
+        )
+      )}
 
     </div>
   )}
