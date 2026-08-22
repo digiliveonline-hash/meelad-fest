@@ -13,7 +13,6 @@ import AdminDashboardNew from "./pages/AdminDashboardNew";
 import CandidateRegistration from "./pages/CandidateRegistration";
 import Leaderboard from "./pages/Leaderboard";
 import AdminSettings from "./pages/AdminSettings";
-import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -21,26 +20,65 @@ function App() {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/results" element={<Results />} />
-        <Route path="/gallery" element={<Gallery />} />
-        <Route path="/team-points" element={<TeamPoints />} />
-        <Route path="/announcements" element={<Announcements />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/admin" element={<Admin />} />
         <Route
-  path="/candidate-registration"
-  element={
-    <ProtectedRoute>
-      <CandidateRegistration />
-    </ProtectedRoute>
-  }
-/>
-/>
-<Route path="/leaderboard" element={<Leaderboard />} />
-<Route path="/admin-settings" element={<AdminSettings />} />
+          path="/"
+          element={<Home />}
+        />
 
+        <Route
+          path="/schedule"
+          element={<Schedule />}
+        />
+
+        <Route
+          path="/results"
+          element={<Results />}
+        />
+
+        <Route
+          path="/gallery"
+          element={<Gallery />}
+        />
+
+        <Route
+          path="/team-points"
+          element={<TeamPoints />}
+        />
+
+        <Route
+          path="/announcements"
+          element={<Announcements />}
+        />
+
+        <Route
+          path="/contact"
+          element={<Contact />}
+        />
+
+        <Route
+          path="/admin"
+          element={<Admin />}
+        />
+
+        <Route
+          path="/admin/dashboard"
+          element={<AdminDashboardNew />}
+        />
+
+        <Route
+          path="/candidate-registration"
+          element={<CandidateRegistration />}
+        />
+
+        <Route
+          path="/leaderboard"
+          element={<Leaderboard />}
+        />
+
+        <Route
+          path="/admin-settings"
+          element={<AdminSettings />}
+        />
       </Routes>
     </>
   );

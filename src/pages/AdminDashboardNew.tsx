@@ -29,6 +29,10 @@ function AdminDashboardNew() {
       case "SS":
         return "Super Senior";
 
+        case "G":
+  return "General";
+
+
       default:
         return category || "-";
     }
@@ -835,14 +839,120 @@ const updateResult = async () => {
   }
 
   try {
+    // ==========================
+    // Find selected programme
+    // ==========================
+
+    const programme = programmes.find(
+      (item: any) => item.id === resultProgramme
+    );
+
+    if (!programme) {
+      alert("Programme not found");
+      return;
+    }
+
+    // ==========================
+    // Find candidates
+    // ==========================
+
+    const first = candidates.find(
+      (c: any) =>
+        String(c.chestNo) === String(editFirstChest)
+    );
+
+    const second = candidates.find(
+      (c: any) =>
+        String(c.chestNo) === String(editSecondChest)
+    );
+
+    const third = candidates.find(
+      (c: any) =>
+        String(c.chestNo) === String(editThirdChest)
+    );
+
+    // ==========================
+    // Check candidates
+    // ==========================
+
+    if (!first || !second || !third) {
+      alert(
+        "One or more chest numbers are not found."
+      );
+      return;
+    }
+
+    // ==========================
+    // Check category
+    // ==========================
+
+    if (
+      first.category !== programme.category ||
+      second.category !== programme.category ||
+      third.category !== programme.category
+    ) {
+      alert(
+        "One or more chest numbers do not belong to the selected category."
+      );
+      return;
+    }
+
+    // ==========================
+    // Points
+    // ==========================
+
+    let firstPoint = 5;
+    let secondPoint = 3;
+    let thirdPoint = 1;
+
+    if (programme.programmeType === "Group") {
+      firstPoint = 10;
+      secondPoint = 5;
+      thirdPoint = 3;
+    }
+
+    // ==========================
+    // Update Result
+    // ==========================
+
     await updateDoc(
       doc(db, "results", editResultId),
       {
+        programmeId: resultProgramme,
+
+        category: programme.category,
+
         firstChest: editFirstChest,
         secondChest: editSecondChest,
         thirdChest: editThirdChest,
+
+        firstName: first.candidateName,
+        secondName: second.candidateName,
+        thirdName: third.candidateName,
+
+        firstTeam: first.team,
+        secondTeam: second.team,
+        thirdTeam: third.team,
+
+        programmeType:
+          programme.programmeType ||
+          "Individual",
+
+        firstPoint,
+        secondPoint,
+        thirdPoint,
       }
     );
+
+    // ==========================
+    // Recalculate Team Scores
+    // ==========================
+
+    await recalculateTeamScores();
+
+    // ==========================
+    // Clear form
+    // ==========================
 
     setEditResultId("");
     setEditFirstChest("");
@@ -850,14 +960,30 @@ const updateResult = async () => {
     setEditThirdChest("");
     setResultProgramme("");
 
+    // ==========================
+    // Reload data
+    // ==========================
+
     await loadResults();
+    await loadTeams();
 
     alert("Result Updated Successfully!");
+
   } catch (error) {
-    console.error("Error updating result:", error);
-    alert("Something went wrong while updating result.");
+    console.error(
+      "Error updating result:",
+      error
+    );
+
+    alert(
+      "Something went wrong while updating result."
+    );
   }
 };
+
+// ==========================
+// Delete Result
+// ==========================
 
 const deleteResult = async (id: string) => {
   if (!confirm("Delete this result?")) return;
@@ -867,12 +993,32 @@ const deleteResult = async (id: string) => {
       doc(db, "results", id)
     );
 
-    await loadResults();
+    // ==========================
+    // Recalculate Team Scores
+    // ==========================
 
-    alert("Result Deleted Successfully!");
+    await recalculateTeamScores();
+
+    // ==========================
+    // Reload data
+    // ==========================
+
+    await loadResults();
+    await loadTeams();
+
+    alert(
+      "Result Deleted Successfully!"
+    );
+
   } catch (error) {
-    console.error("Error deleting result:", error);
-    alert("Something went wrong while deleting result.");
+    console.error(
+      "Error deleting result:",
+      error
+    );
+
+    alert(
+      "Something went wrong while deleting result."
+    );
   }
 };
 
@@ -1065,6 +1211,7 @@ const deleteResult = async (id: string) => {
   <option value="J">Junior</option>
   <option value="S">Senior</option>
   <option value="SS">Super Senior</option>
+  <option value="G">General</option>
 </select>
 
               <input
@@ -1344,6 +1491,7 @@ const deleteResult = async (id: string) => {
   <option value="J">Junior</option>
   <option value="S">Senior</option>
   <option value="SS">Super Senior</option>
+  <option value="G">General</option>
 </select>
 
               <select
@@ -1502,6 +1650,8 @@ const deleteResult = async (id: string) => {
         ? "Senior"
         : programme.category === "SS"
         ? "Super Senior"
+        : programme.category === "G"
+        ? "General"
         : "Category Not Set"
     }
   </option>
